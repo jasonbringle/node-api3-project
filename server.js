@@ -4,6 +4,7 @@ const userRouter = require('./users/userRouter.js')
 const server = express();
 
 server.use(express.json());
+server.use(cors());
 
 server.use(logger)
 
