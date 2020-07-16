@@ -15,10 +15,10 @@ router.post('/', (req, res) => {
       res.status(500).json({ error: "Error Adding User. Please Try Again."}))
 });
 
-router.post('/:id/posts', (req, res) => {
+router.post('/:id/posts', validateUser, validateUserId, validatePost,(req, res) => {
  const body = req.body;
 
- UserDb.insert(body)
+ PostDb.insert(body)
   .then(post => 
     res.status(201).json(post))
   .catch(err =>
@@ -33,7 +33,7 @@ router.get('/', (req, res) => {
     res.status(500).json({errormessage: 'Could not get users!'}))
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id',  validateUser, (req, res) => {
   const { id } = req.params;
 
   UserDb.getById(id)
@@ -43,20 +43,16 @@ router.get('/:id', (req, res) => {
       res.status(500).json({ errormessage: 'Could not get user'}))
 });
 
-router.get('/:id/posts', (req, res) => {
+router.get('/:id/posts', validateUser, (req, res) => {
   const { id } = req.params
-  UserDb.getById(id)
-  .then(user => 
-    PostDb.getById(user.id)
-      .then(post =>
-        res.status(200).json(post))
-      .catch(err => 
-        res.status(500).json({ errormessage: 'Could not get post from that user'})))
-  .catch(err => 
-    res.status(500).json({ errormessage: 'Could not find that user.'}))
+  UserDb.getUserPosts(id)
+    .then(posts =>{
+        res.status(200).json(posts)})
+    .catch(err => 
+        res.status(500).json({ errormessage: 'Could not get post from that user'}))
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', validateUser, (req, res) => {
   const { id } = req.params;
 
   UserDb.remove(id)
@@ -66,7 +62,7 @@ router.delete('/:id', (req, res) => {
       res.status(500).json({ errormessage: 'User has not been eliminated.'}))
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', validateUser, (req, res) => {
   const { id } = req.params;
   const body = req.body;
   
@@ -80,15 +76,38 @@ router.put('/:id', (req, res) => {
 //custom middleware
 
 function validateUserId(req, res, next) {
-  // do your magic!
+const body = req.body
+  UserDb.getById(body.user_id)
+    .then(user =>{
+      if(user.id == body.user_id){ ;
+        next();
+      }else{ res.status(404).json({errormessage: "ID for this user does not exist."})};
+    })
+    .catch(err => 
+      res.status(500).json({ errormessage: "User ID not found"})
+      );
 }
 
 function validateUser(req, res, next) {
-  // do your magic!
+  const body = req.body;
+  const { id } = req.params;
+
+  UserDb.getById(id)
+    .then(user =>
+      {if(user.name){
+        next();
+      }})
+    .catch(err =>
+      res.status(500).json({ errormessage: " Did not find user"}))
 }
 
 function validatePost(req, res, next) {
-  // do your magic!
+  const body = req.body;
+  if(body.text.length > 0){
+    next()
+  } else{
+    res.status(500).json({ errormessage: "Please add text to your post!"})
+  }
 }
 
 module.exports = router;
